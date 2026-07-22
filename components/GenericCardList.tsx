@@ -1,0 +1,141 @@
+"use client";
+
+import { useState } from "react";
+import { useItems } from "@/lib/useItems";
+import { STYLE, cardStyle } from "@/lib/style";
+import { MapPin, Star, Heart, Plus, X } from "lucide-react";
+
+function mapsSearchLink(name: string, context: string) {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name}, ${context}`)}`;
+}
+
+export default function GenericCardList({
+  projectId,
+  section,
+  groupLabel = "Gruppe",
+  extraFieldLabel = "Ort/Kontext",
+}: {
+  projectId: string;
+  section: string;
+  groupLabel?: string;
+  extraFieldLabel?: string;
+}) {
+  const { items, loading, addItem, updateItem, deleteItem } = useItems(projectId, section);
+  const [showForm, setShowForm] = useState(false);
+
+  if (loading) return <p style={{ color: "#9A9384", fontSize: 14 }}>Lädt…</p>;
+
+  const groups = Array.from(new Set(items.map((it) => it.data.group || "Allgemein")));
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      <button
+        onClick={() => setShowForm(true)}
+        style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "12px 0", borderRadius: 12, border: `1px dashed #C9C2B0`, background: "transparent", color: STYLE.ink, fontSize: 14, fontWeight: 600 }}
+      >
+        <Plus size={16} /> Eintrag hinzufügen
+      </button>
+
+      {showForm && (
+        <AddCardForm
+          groupLabel={groupLabel}
+          extraFieldLabel={extraFieldLabel}
+          onCancel={() => setShowForm(false)}
+          onSave={async (data) => { await addItem(data); setShowForm(false); }}
+        />
+      )}
+
+      {groups.length === 0 && !showForm && (
+        <p style={{ fontSize: 14, color: "#9A9384", textAlign: "center" }}>Noch keine Einträge – füg den ersten hinzu!</p>
+      )}
+
+      {groups.map((group) => {
+        const groupItems = items.filter((it) => (it.data.group || "Allgemein") === group);
+        return (
+          <div key={group}>
+            <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 17, marginBottom: 10 }}>{group}</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {groupItems.map((it) => (
+                <div key={it.id} style={cardStyle}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 14.5 }}>{it.data.name}</div>
+                      {it.data.type && <div style={{ fontSize: 12, color: "#9A9384", marginTop: 1 }}>{it.data.type}</div>}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                      {it.data.rating ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                          <Star size={13} fill={STYLE.accent} color={STYLE.accent} />
+                          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, fontWeight: 600 }}>{it.data.rating}</span>
+                        </div>
+                      ) : null}
+                      <button onClick={() => updateItem(it.id, { ...it.data, favorite: !it.data.favorite })} style={{ background: "none", border: "none" }}>
+                        <Heart size={17} fill={it.data.favorite ? STYLE.danger : "none"} color={it.data.favorite ? STYLE.danger : "#C9C2B0"} />
+                      </button>
+                      <button onClick={() => deleteItem(it.id)} style={{ background: "none", border: "none", color: "#C9C2B0" }}>
+                        <X size={16} />
+                      </button>
+                    </div>
+                  </div>
+                  {it.data.note && <p style={{ fontSize: 13.5, color: "#4A453C", lineHeight: 1.55, margin: "8px 0 0" }}>{it.data.note}</p>}
+                  <a
+                    href={mapsSearchLink(it.data.name, it.data.context || group)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 9, fontSize: 12.5, fontWeight: 600, color: STYLE.accent, textDecoration: "none" }}
+                  >
+                    <MapPin size={13} /> In Google Maps öffnen
+                  </a>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function AddCardForm({
+  onSave,
+  onCancel,
+  groupLabel,
+  extraFieldLabel,
+}: {
+  onSave: (data: Record<string, any>) => void;
+  onCancel: () => void;
+  groupLabel: string;
+  extraFieldLabel: string;
+}) {
+  const [form, setForm] = useState({ name: "", type: "", group: "", note: "", context: "" });
+
+  return (
+    <div style={{ ...cardStyle, border: `1px solid ${STYLE.accent}55` }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <input placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} style={inputStyle} />
+        <input placeholder="Art (z. B. Restaurant, Café…)" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} style={inputStyle} />
+        <input placeholder={groupLabel} value={form.group} onChange={(e) => setForm({ ...form, group: e.target.value })} style={inputStyle} />
+        <input placeholder={extraFieldLabel} value={form.context} onChange={(e) => setForm({ ...form, context: e.target.value })} style={inputStyle} />
+        <textarea placeholder="Notiz (optional)" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} rows={2} style={inputStyle} />
+        <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+          <button onClick={onCancel} style={{ flex: 1, padding: "9px 0", borderRadius: 9, border: "1px solid #E0D9C6", background: "transparent", fontSize: 13.5 }}>Abbrechen</button>
+          <button
+            onClick={() => form.name.trim() && onSave(form)}
+            style={{ flex: 1, padding: "9px 0", borderRadius: 9, border: "none", background: STYLE.ink, color: "#fff", fontSize: 13.5, fontWeight: 600 }}
+          >
+            Speichern
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const inputStyle: React.CSSProperties = {
+  padding: "9px 11px",
+  borderRadius: 9,
+  border: "1px solid #E0D9C6",
+  fontSize: 13.5,
+  width: "100%",
+  fontFamily: "inherit",
+};
