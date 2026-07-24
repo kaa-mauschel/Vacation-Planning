@@ -27,9 +27,25 @@ export function patchFetchForDebug() {
         const h = new Headers(init?.headers || (input instanceof Request ? input.headers : undefined));
         h.forEach((value, key) => {
           if (key.toLowerCase() === "authorization") {
-            headersObj[key] = value ? `${value.slice(0, 25)}… (Länge: ${value.length})` : "(leer)";
+            const parts = value.replace("Bearer ", "").split(".");
+            let decoded = "";
+            try {
+              const p = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+              decoded = ` [role=${p.role}, aud=${p.aud}, iss=${p.iss}]`;
+            } catch {}
+            headersObj[key] = `Bearer ${parts[0]}...${decoded}`;
           } else if (key.toLowerCase() === "apikey") {
-            headersObj[key] = value ? `${value.slice(0, 15)}…` : "(leer)";
+            if (value.startsWith("sb_publishable_")) {
+              headersObj[key] = `${value} [neues Format, publishable key]`;
+            } else {
+              try {
+                const parts = value.split(".");
+                const p = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+                headersObj[key] = `${value.slice(0, 20)}... [JWT: role=${p.role}, ref=${p.ref}]`;
+              } catch {
+                headersObj[key] = `${value.slice(0, 20)}...`;
+              }
+            }
           } else {
             headersObj[key] = value;
           }

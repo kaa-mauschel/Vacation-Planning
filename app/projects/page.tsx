@@ -137,10 +137,12 @@ function NewProjectModal({ onClose, onCreated, userId }: { onClose: () => void; 
     let tokenInfo = "";
     try {
       const token = sessionData.session.access_token;
-      const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+      const [rawHeader, rawPayload] = token.split(".");
+      const header = JSON.parse(atob(rawHeader.replace(/-/g, "+").replace(/_/g, "/")));
+      const payload = JSON.parse(atob(rawPayload.replace(/-/g, "+").replace(/_/g, "/")));
       tokenInfo =
-        `Token-sub (=auth.uid() sollte sein): ${payload.sub}\n` +
-        `Token-role: ${payload.role}\n` +
+        `Token-Header (komplett): ${JSON.stringify(header)}\n` +
+        `Token-Payload (komplett): ${JSON.stringify(payload, null, 0)}\n` +
         `Token läuft ab: ${new Date(payload.exp * 1000).toLocaleString("de-DE")}\n` +
         `Jetzt: ${new Date().toLocaleString("de-DE")}\n`;
     } catch (e) {
