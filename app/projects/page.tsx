@@ -110,6 +110,7 @@ export default function ProjectsPage() {
 
       {showNew && <NewProjectModal onClose={() => setShowNew(false)} onCreated={loadProjects} userId={user.id} />}
       {showJoin && <JoinProjectModal onClose={() => setShowJoin(false)} onJoined={loadProjects} />}
+      <WhoAmITest />
     </div>
   );
 }
@@ -267,6 +268,34 @@ function JoinProjectModal({ onClose, onJoined }: { onClose: () => void; onJoined
         {saving ? "Trete bei…" : "Beitreten"}
       </button>
     </ModalShell>
+  );
+}
+
+function WhoAmITest() {
+  const [result, setResult] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const run = async () => {
+    setLoading(true);
+    setResult("");
+    const { data, error } = await supabase.rpc("debug_whoami");
+    setLoading(false);
+    setResult(error ? `Fehler: ${error.message}` : JSON.stringify(data, null, 2));
+  };
+
+  return (
+    <div style={{ marginTop: 30, padding: 16, background: "#F1EADA", borderRadius: 12, fontSize: 12.5 }}>
+      <button
+        onClick={run}
+        disabled={loading}
+        style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid #C9C2B0", background: "#fff", fontSize: 13, fontWeight: 600 }}
+      >
+        {loading ? "Teste…" : "🔍 Auth-Diagnose-Test ausführen"}
+      </button>
+      {result && (
+        <pre style={{ marginTop: 10, whiteSpace: "pre-wrap", background: "#fff", padding: 10, borderRadius: 8 }}>{result}</pre>
+      )}
+    </div>
   );
 }
 
